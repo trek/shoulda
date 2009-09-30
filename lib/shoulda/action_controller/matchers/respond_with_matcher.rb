@@ -25,9 +25,19 @@ module Shoulda # :nodoc:
           @status = symbol_to_status_code(status)
         end
         
+        def to(where)
+           @location = case where
+           when Symbol
+             {:action => where.to_s}
+           else
+             where
+           end
+           self
+         end
+                
         def matches?(controller)
           @controller = controller
-          correct_status_code? || correct_status_code_range?
+          (correct_status_code? || correct_status_code_range?) && correct_redirect_location
         end
         
         def failure_message
@@ -37,9 +47,11 @@ module Shoulda # :nodoc:
         def negative_failure_message
           "Did not expect #{expectation}"
         end
-
+        
         def description
-          "respond with #{@status}"
+          description = "respond with #{@status}"
+          description << " to #{@location.inspect}" unless @location.nil?
+          description
         end
         
         protected
@@ -51,6 +63,11 @@ module Shoulda # :nodoc:
         def correct_status_code_range?
           @status.is_a?(Range) &&
             @status.include?(response_code)
+        end
+        
+        def correct_redirect_location
+          return true unless @location
+          @controller.response.redirected_to == @location
         end
         
         def response_code
@@ -71,7 +88,11 @@ module Shoulda # :nodoc:
         end
         
         def expectation
-          "response to be a #{@status}, but was #{response_code}"
+          expectation = "response to be a #{@status},"
+          expectation << " redirecting to #{@location.inspect}, " if @location
+          expectation << " but was #{response_code}"
+          expectation << " redirected to #{@controller.response.redirected_to.inspect}" if @location
+          expectation
         end
         
       end

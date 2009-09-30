@@ -22,7 +22,7 @@ class RespondWithMatcherTest < ActionController::TestCase # :nodoc:
   
   context "a controller responding with redirect" do
     setup do
-      @controller = build_response { render :text => "text", :status => 301 }
+      @controller = build_response { redirect_to 'http://example.com', :status => 301 }
     end
 
     should "accept responding with 301" do
@@ -35,6 +35,25 @@ class RespondWithMatcherTest < ActionController::TestCase # :nodoc:
     
     should "reject responding with another status" do
       assert_rejects respond_with(:error), @controller
+    end
+  end
+  
+  [["a hash", {:action => :example}, {:action => :example}],
+  ["a string without protocol",  "/images/screenshot.jpg", "/images/screenshot.jpg"],
+  ["a string with protocol", "http://www.rubyonrails.org", "http://www.rubyonrails.org"],
+  ["a symbol", :example, {:action => 'example'}]].each do |description, matcher_argument, expected_value|
+    context "a controller responding with redirect to a specific location as #{description}" do
+      setup do
+        @controller = build_response { redirect_to expected_value }
+      end
+      
+      should "accept redirecting to #{matcher_argument}" do
+        assert_accepts respond_with(:redirect).to(matcher_argument), @controller
+      end
+      
+      should "reject redirect to another location" do
+        assert_rejects respond_with(:redirect).to("http://anotherlocation.org"), @controller
+      end
     end
   end
   
